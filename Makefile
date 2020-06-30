@@ -50,7 +50,7 @@ SOURCES  := $(wildcard $(SRCDIR)/*.c)
 .PRECIOUS: $(TARGET) $(SOURCES)
 
 $(BINDIR)/$(TARGET): $(SOURCES)| $(BINDIR)
-	$(CC) $(SOURCES) -Wall $(LIBS) $(DEFINITIONS) -o $@
+	$(CC) $(CFLAGS)$  $(SOURCES) -Wall $(LIBS) $(DEFINITIONS) -o $@
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
