@@ -18,7 +18,7 @@ def main():
     t0 = time.time()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--graphml', required=True, help='graphml')
-    # parser.add_argument('--level', default=5, help='Acessibility param')
+    parser.add_argument('--nprocs', default=1, help='num procs')
     parser.add_argument('--outdir', default='/tmp/out/', help='outdir')
     args = parser.parse_args()
     
@@ -44,8 +44,8 @@ def main():
         info('level:{}'.format(level))
         accessibpath = os.path.join(args.outdir, 'accessib{:02d}.txt'.format(level))
 
-        cmd = 'Build_Linux/CVAccessibility -l {} {} {}'.\
-            format(level, xnetgraphpath, accessibpath)
+        cmd = 'Build_Linux/CVAccessibility -j {} -l {} {} {}'.\
+            format(args.nprocs, level, xnetgraphpath, accessibpath)
 
         info('Running {}'.format(cmd))
         proc = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
