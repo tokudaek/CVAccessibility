@@ -32,7 +32,8 @@ def main():
     args = parser.parse_args()
 
     if args.outpath == None:
-        outpath = pjoin('/tmp/', 'w' + os.path.basename(args.xnet))
+        suff = os.path.splitext(args.accessibs)[0]
+        outpath = pjoin('/tmp/', 'w{}.xnet'.format(os.path.basename(suff)))
     else:
         outpath = args.outpath
 
@@ -49,6 +50,10 @@ def main():
             g.es[eid]['weight'] = acc[j]
 
     xnet.igraph2xnet(g, outpath)
+
+    with open(outpath) as fh:
+        content = fh.read()
+        assert ('edges weighted' in content) == True
 
     info('Please check {}'.format(outpath))
     info('Elapsed time:{}'.format(time.time()-t0))

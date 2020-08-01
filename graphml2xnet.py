@@ -19,17 +19,15 @@ def main():
     t0 = time.time()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--graphml', required=True, help='graphml')
-    parser.add_argument('--output', default='', help='Output  xnet path')
+    parser.add_argument('--undirect', default=False, help='graphml')
+    parser.add_argument('--outdir', default='/tmp/out/', help='output dir')
     args = parser.parse_args()
     
     logging.basicConfig(format='[%(asctime)s] %(message)s',
     datefmt='%Y%m%d %H:%M', level=logging.INFO)
 
-    if args.output == '':
-        xnetpath = pjoin('/tmp/', 
-                os.path.basename(args.graphml).replace('.graphml', '.xnet'))
-    else:
-        xnetpath = args.output
+    xnetpath = pjoin(args.outdir,
+            os.path.basename(args.graphml).replace('.graphml', '.xnet'))
     
     info('Loading graph...')
     g = igraph.Graph.Read(args.graphml)
@@ -38,6 +36,8 @@ def main():
         del(g.vs[attr])
     for attr in g.es.attributes():
         del(g.es[attr])
+
+    if args.undirect: g.to_undirected()
 
     info('Converting to xnet...')
     xnet.igraph2xnet(g, xnetpath)
