@@ -20,7 +20,7 @@ from matplotlib.collections import LineCollection
 import subprocess
 
 ##########################################################
-def plot_graph(g, coords, accessib, outdir):
+def plot_graph(g, coords, accessib, plotpath):
     """Plot the grpah, with vertices colored by accessibility."""
     info(inspect.stack()[0][3] + '()')
 
@@ -31,11 +31,11 @@ def plot_graph(g, coords, accessib, outdir):
 
     fig, ax = plt.subplots(figsize=(20, 20))
     sc = ax.scatter(coords[:, 0], coords[:, 1], c=accessib[0].values,
-            cmap='plasma', linewidths=0, alpha=.5)
-    segs = LineCollection(es, colors='k', linewidths=.2, alpha=.5)
+            cmap='plasma', linewidths=0, alpha=.8, s=10, zorder=10)
+    segs = LineCollection(es, colors='gray', linewidths=.1, alpha=.5)
     ax.add_collection(segs)
     plt.colorbar(sc)
-    plt.savefig(pjoin(outdir, 'accessib.png'))
+    plt.savefig(plotpath)
 
 ##########################################################
 def call_accessib_binary(g, level, xnetpath, outpath):
@@ -83,7 +83,8 @@ def main():
         call_accessib_binary(g, args.level, xnetpath, accessibpath)
 
     accessib = pd.read_csv(accessibpath, header=None)
-    plot_graph(g, coords, accessib, args.outdir)
+    plotpath  = pjoin(args.outdir, '{}_acc{:03d}.pdf'.format(suff, args.level))
+    plot_graph(g, coords, accessib, plotpath)
 
     info('Elapsed time:{}'.format(time.time()-t0))
 
