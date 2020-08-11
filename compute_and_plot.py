@@ -76,14 +76,14 @@ def main():
     else:
         coords = np.array(g.layout('fr'))
 
-    accessibpath = pjoin(args.outdir, '{}_acc{:03d}.txt'.format(suff, args.level))
+    accessibpath = pjoin(args.outdir, '{}_acc{:02d}.txt'.format(suff, args.level))
 
     if not os.path.exists(accessibpath):
         xnetpath = pjoin(args.outdir, suff + '.xnet')
         call_accessib_binary(g, args.level, xnetpath, accessibpath)
 
     accessib = pd.read_csv(accessibpath, header=None)
-    plotpath  = pjoin(args.outdir, '{}_acc{:03d}.pdf'.format(suff, args.level))
+    plotpath  = pjoin(args.outdir, '{}_acc{:02d}.pdf'.format(suff, args.level))
     plot_graph(g, coords, accessib, plotpath)
 
     info('Elapsed time:{}'.format(time.time()-t0))
