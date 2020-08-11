@@ -56,6 +56,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--graphml', required=True, help='Graph in graphml format')
     parser.add_argument('--level', required=True, type=int, help='Number of steps')
+    parser.add_argument('--undirected', action='store_true', help='Remove direction')
     parser.add_argument('--outdir', default='/tmp/out/', help='Output directory')
     args = parser.parse_args()
 
@@ -64,6 +65,8 @@ def main():
     suff = os.path.splitext(os.path.basename(args.graphml))[0]
     g = igraph.Graph.Read(args.graphml)
     g.simplify()
+    
+    if args.undirected: g.to_undirected()
 
     info('Graph is directed: {}'.format(g.is_directed()))
     info('nvertices:{}'.format(g.vcount()))
@@ -76,14 +79,16 @@ def main():
     else:
         coords = np.array(g.layout('fr'))
 
-    accessibpath = pjoin(args.outdir, '{}_acc{:02d}.txt'.format(suff, args.level))
+    accessibpath = pjoin(args.outdir, '{}_{}_acc{:02d}.txt'. \
+            format(suff, 'directed' if g.is_directed() else 'undirected',
+                args.level))
 
     if not os.path.exists(accessibpath):
         xnetpath = pjoin(args.outdir, suff + '.xnet')
         call_accessib_binary(g, args.level, xnetpath, accessibpath)
 
     accessib = pd.read_csv(accessibpath, header=None)
-    plotpath  = pjoin(args.outdir, '{}_acc{:02d}.pdf'.format(suff, args.level))
+    plotpath  = accessibpath.replace('.txt', '.pdf')
     plot_graph(g, coords, accessib, plotpath)
 
     info('Elapsed time:{}'.format(time.time()-t0))
