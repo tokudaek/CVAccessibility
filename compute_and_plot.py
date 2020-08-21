@@ -16,11 +16,13 @@ import matplotlib; matplotlib.use('Agg')
 from datetime import datetime
 import igraph
 from myutils import info, create_readme, xnet
+from myutils.geo import get_shp_points
 from matplotlib.collections import LineCollection
 import subprocess
+import pickle
 
-##########################################################
-def plot_graph(g, coords, accessib, plotpath):
+#############################################################
+def plot_graph(g, coords, accessib, shppath, plotpath):
     """Plot the grpah, with vertices colored by accessibility."""
     info(inspect.stack()[0][3] + '()')
 
@@ -29,12 +31,19 @@ def plot_graph(g, coords, accessib, plotpath):
         es.append([ [float(g.vs[e.source]['x']), float(g.vs[e.source]['y'])],
                 [float(g.vs[e.target]['x']), float(g.vs[e.target]['y'])], ])
 
-    fig, ax = plt.subplots(figsize=(20, 20))
+    fig, ax = plt.subplots(figsize=(7, 7))
     sc = ax.scatter(coords[:, 0], coords[:, 1], c=accessib[0].values,
-            cmap='plasma', linewidths=0, alpha=.8, s=10, zorder=10)
+            cmap='plasma', linewidths=0, alpha=.6, s=3, zorder=10)
     segs = LineCollection(es, colors='gray', linewidths=.1, alpha=.5)
-    ax.add_collection(segs)
-    plt.colorbar(sc)
+    # ax.add_collection(segs)
+    cb = fig.colorbar(sc, shrink=.75)
+    cb.outline.set_visible(False)
+    if shppath: # Plot border
+        mapx, mapy = get_shp_points(shppath)
+        ax.plot(mapx, mapy, c='dimgray')
+
+    ax.axis('off')
+    plt.tight_layout()
     plt.savefig(plotpath)
 
 ##########################################################
@@ -57,12 +66,15 @@ def main():
     parser.add_argument('--graphml', required=True, help='Graph in graphml format')
     parser.add_argument('--level', required=True, type=int, help='Number of steps')
     parser.add_argument('--undirected', action='store_true', help='Remove direction')
+    parser.add_argument('--shp', help='Border shapefile (optional)')
     parser.add_argument('--outdir', default='/tmp/out/', help='Output directory')
     args = parser.parse_args()
 
     if not os.path.isdir(args.outdir): os.mkdir(args.outdir)
     readmepath = create_readme(sys.argv, args.outdir)
     suff = os.path.splitext(os.path.basename(args.graphml))[0]
+    graphpkl = pjoin(args.outdir, 'graph.pkl')
+
     g = igraph.Graph.Read(args.graphml)
     g.simplify()
     
@@ -73,9 +85,9 @@ def main():
     info('nedges: {}'.format(g.ecount()))
 
     if ('x' in g.vertex_attributes()) and ('y' in g.vertex_attributes()):
-        coords = np.zeros((g.vcount(), 2))
-        for i in range(g.vcount()):
-            coords[i, :] = np.array([float(g.vs['x'][i]), float(g.vs['y'][i])])
+        xx = np.array(g.vs['x']).astype(float)
+        yy = np.array(g.vs['y']).astype(float)
+        coords = np.concatenate((xx, yy)).reshape(len(xx), 2, order='F')
     else:
         coords = np.array(g.layout('fr'))
 
@@ -88,8 +100,8 @@ def main():
         call_accessib_binary(g, args.level, xnetpath, accessibpath)
 
     accessib = pd.read_csv(accessibpath, header=None)
-    plotpath  = accessibpath.replace('.txt', '.pdf')
-    plot_graph(g, coords, accessib, plotpath)
+    plotpath  = accessibpath.replace('.txt', '.png')
+    plot_graph(g, coords, accessib, args.shp, plotpath)
 
     info('Elapsed time:{}'.format(time.time()-t0))
 
