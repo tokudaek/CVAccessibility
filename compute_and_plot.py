@@ -17,6 +17,7 @@ from datetime import datetime
 import igraph
 from myutils import info, create_readme, xnet
 from myutils.geo import get_shp_points
+import myutils.plot
 from matplotlib.collections import LineCollection
 import subprocess
 import pickle
@@ -31,11 +32,11 @@ def plot_graph(g, coords, accessib, shppath, plotpath):
         es.append([ [float(g.vs[e.source]['x']), float(g.vs[e.source]['y'])],
                 [float(g.vs[e.target]['x']), float(g.vs[e.target]['y'])], ])
 
-    fig, ax = plt.subplots(figsize=(7, 7))
+    fig, ax = plt.subplots(figsize=(9, 9))
     sc = ax.scatter(coords[:, 0], coords[:, 1], c=accessib[0].values,
-            cmap='plasma', linewidths=0, alpha=.6, s=3, zorder=10)
+            cmap='plasma', linewidths=0, alpha=.6, s=2, zorder=10)
     segs = LineCollection(es, colors='gray', linewidths=.1, alpha=.5)
-    # ax.add_collection(segs)
+    ax.add_collection(segs)
     cb = fig.colorbar(sc, shrink=.75)
     cb.outline.set_visible(False)
     if shppath: # Plot border
@@ -46,6 +47,40 @@ def plot_graph(g, coords, accessib, shppath, plotpath):
     plt.tight_layout()
     plt.savefig(plotpath)
 
+#############################################################
+def plot_graph_quantiles(g, coords, accessib, shppath, plotpath):
+    """Plot the grpah, with vertices colored by accessibility."""
+    info(inspect.stack()[0][3] + '()')
+
+    es = []
+    for e in g.es:
+        es.append([ [float(g.vs[e.source]['x']), float(g.vs[e.source]['y'])],
+                [float(g.vs[e.target]['x']), float(g.vs[e.target]['y'])], ])
+
+    # colours = myutils.plot.palettes['saturated']
+    colours = ['blue',
+               'green',
+               'red']
+    fig, ax = plt.subplots(figsize=(9, 9))
+    quantiles = np.quantile(accessib[0], [0.00, .333, .667, 1.00])
+
+    for i, a in enumerate(quantiles[:-1]):
+        b = quantiles[i+1]
+        inds = np.where( (accessib[0] >= a) & (accessib[0] < b))
+        ax.scatter(coords[:, 0][inds], coords[:, 1][inds],
+                   c=colours[i], linewidths=0, alpha=.6, s=2, zorder=10,
+                   label='{}-quantile'.format(i+1))
+
+    segs = LineCollection(es, colors='gray', linewidths=.1, alpha=.5)
+    # ax.add_collection(segs)
+    plt.legend(markerscale=3)
+    if shppath: # Plot border
+        mapx, mapy = get_shp_points(shppath)
+        ax.plot(mapx, mapy, c='dimgray')
+
+    ax.axis('off')
+    plt.tight_layout()
+    plt.savefig(plotpath)
 ##########################################################
 def call_accessib_binary(g, level, xnetpath, outpath):
     """Call binary to calculate accessibility"""
@@ -57,7 +92,7 @@ def call_accessib_binary(g, level, xnetpath, outpath):
     info('{}'.format(cmd))
     stream = subprocess.Popen(cmd, shell=True)
     stream.wait()
-    
+
 ##########################################################
 def main():
     info(inspect.stack()[0][3] + '()')
@@ -77,7 +112,7 @@ def main():
 
     g = igraph.Graph.Read(args.graphml)
     g.simplify()
-    
+
     if args.undirected: g.to_undirected()
 
     info('Graph is directed: {}'.format(g.is_directed()))
@@ -100,8 +135,10 @@ def main():
         call_accessib_binary(g, args.level, xnetpath, accessibpath)
 
     accessib = pd.read_csv(accessibpath, header=None)
-    plotpath  = accessibpath.replace('.txt', '.png')
+    plotpath  = accessibpath.replace('.txt', '.pdf')
     plot_graph(g, coords, accessib, args.shp, plotpath)
+    plot_graph_quantiles(g, coords, accessib, args.shp,
+                         plotpath.replace('.pdf', '_quant.pdf'))
 
     info('Elapsed time:{}'.format(time.time()-t0))
 
