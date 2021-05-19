@@ -82,12 +82,13 @@ def plot_graph_quantiles(g, coords, accessib, shppath, plotpath):
     plt.tight_layout()
     plt.savefig(plotpath)
 ##########################################################
-def call_accessib_binary(g, level, xnetpath, outpath):
+def call_accessib_binary(g, randomwalk, level, xnetpath, outpath):
     """Call binary to calculate accessibility"""
     info(inspect.stack()[0][3] + '()')
+    dynamics = '-r' if randomwalk else ''
     xnet.igraph2xnet(g, xnetpath)
     info('Graph in xnet format available in {}'.format(xnetpath))
-    cmd = 'Build_Linux/CVAccessibility -l "{}" "{}" "{}"'.format(level,
+    cmd = 'Build_Linux/CVAccessibility {} -l "{}" "{}" "{}"'.format(dynamics, level,
             xnetpath, outpath)
     info('{}'.format(cmd))
     stream = subprocess.Popen(cmd, shell=True)
@@ -99,13 +100,15 @@ def main():
     t0 = time.time()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--graphml', required=True, help='Graph in graphml format')
+    parser.add_argument('--randomwalk', action='store_true',
+            help='Computation based on random walk dynamics (*not* self-avoiding)')
     parser.add_argument('--level', required=True, type=int, help='Number of steps')
     parser.add_argument('--undirected', action='store_true', help='Remove direction')
     parser.add_argument('--shp', help='Border shapefile (optional)')
     parser.add_argument('--outdir', default='/tmp/out/', help='Output directory')
     args = parser.parse_args()
 
-    if not os.path.isdir(args.outdir): os.mkdir(args.outdir)
+    os.makedirs(args.outdir, exist_ok=True)
     readmepath = create_readme(sys.argv, args.outdir)
     suff = os.path.splitext(os.path.basename(args.graphml))[0]
     graphpkl = pjoin(args.outdir, 'graph.pkl')
@@ -132,7 +135,7 @@ def main():
 
     if not os.path.exists(accessibpath):
         xnetpath = pjoin(args.outdir, suff + '.xnet')
-        call_accessib_binary(g, args.level, xnetpath, accessibpath)
+        call_accessib_binary(g, args.randomwalk, args.level, xnetpath, accessibpath)
 
     accessib = pd.read_csv(accessibpath, header=None)
     plotpath  = accessibpath.replace('.txt', '.pdf')
