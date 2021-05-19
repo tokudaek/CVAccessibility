@@ -82,14 +82,14 @@ def plot_graph_quantiles(g, coords, accessib, shppath, plotpath):
     plt.tight_layout()
     plt.savefig(plotpath)
 ##########################################################
-def call_accessib_binary(g, randomwalk, level, xnetpath, outpath):
+def call_accessib_binary(g, randomwalk, level, xnetpath, outpath, njobs):
     """Call binary to calculate accessibility"""
     info(inspect.stack()[0][3] + '()')
     dynamics = '-r' if randomwalk else ''
     xnet.igraph2xnet(g, xnetpath)
     info('Graph in xnet format available in {}'.format(xnetpath))
-    cmd = 'Build_Linux/CVAccessibility {} -l "{}" "{}" "{}"'.format(dynamics, level,
-            xnetpath, outpath)
+    cmd = 'Build_Linux/CVAccessibility {} -j {} -l "{}" "{}" "{}"'.  \
+        format(dynamics, njobs, level, xnetpath, outpath)
     info('{}'.format(cmd))
     stream = subprocess.Popen(cmd, shell=True)
     stream.wait()
@@ -105,6 +105,7 @@ def main():
     parser.add_argument('--level', required=True, type=int, help='Number of steps')
     parser.add_argument('--undirected', action='store_true', help='Remove direction')
     parser.add_argument('--shp', help='Border shapefile (optional)')
+    parser.add_argument('--njobs', default=1, help='Maximum number of jobs')
     parser.add_argument('--outdir', default='/tmp/out/', help='Output directory')
     args = parser.parse_args()
 
@@ -135,7 +136,10 @@ def main():
 
     if not os.path.exists(accessibpath):
         xnetpath = pjoin(args.outdir, suff + '.xnet')
-        call_accessib_binary(g, args.randomwalk, args.level, xnetpath, accessibpath)
+        call_accessib_binary(g, args.randomwalk, args.level, xnetpath,
+                             accessibpath, args.njobs)
+    else:
+        info('Loading pre-computed accessibility:{}'.format(accessibpath))
 
     accessib = pd.read_csv(accessibpath, header=None)
     plotpath  = accessibpath.replace('.txt', '.pdf')
